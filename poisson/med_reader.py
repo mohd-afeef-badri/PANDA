@@ -243,3 +243,87 @@ def create_square_mesh(n=4):
             cells.append(cell)
     
     return PolygonalMesh(vertices, cells)
+
+
+def extract_edge_groups_from_med(filename, mesh_name=None):
+    """
+    Extract edge groups from MED file for boundary condition specification.
+    
+    Parameters:
+    -----------
+    filename : str
+        Path to MED file
+    mesh_name : str, optional
+        Name of mesh to read
+    
+    Returns:
+    --------
+    dict
+        Dictionary mapping group names to arrays of global edge indices
+        Format: {'group_name': [edge_idx1, edge_idx2, ...]}
+    """
+    med_mesh = mc.MEDFileMesh.New(filename)
+    
+    if mesh_name is None:
+        mesh_name = med_mesh.getName()
+    
+    # Get the boundary mesh (level -1)
+    try:
+        boundary_mesh = med_mesh.getMeshAtLevel(-1)
+    except:
+        print("No boundary mesh found at level -1")
+        return {}
+    
+    # Get volume mesh to build edge mapping
+    umesh = med_mesh.getMeshAtLevel(0)
+    umesh.mergeNodes(1e-10)
+    
+    # Build edge to index mapping from volume mesh
+    edge_to_idx = {}
+    edge_list = []
+    
+    # Extract all edges from volume mesh cells
+    for cell_id in range(umesh.getNumberOfCells()):
+        cell_conn = umesh.getNodeIdsOfCell(cell_id)
+        n_verts = len(cell_conn)
+        for i in range(n_verts):
+            v1, v2 = cell_conn[i], cell_conn[(i+1) % n_verts]
+            edge = tuple(sorted([v1, v2]))
+            if edge not in edge_to_idx:
+                edge_to_idx[edge] = len(edge_list)
+                edge_list.append(edge)
+    
+    # Extract groups from boundary mesh
+    edge_groups = {}
+    
+    try:
+        group_names = med_mesh.getGroupsNames()
+        print(f"Found boundary groups: {group_names}")
+        
+        for group_name in group_names:
+            try:
+                # Get cell IDs in this group at boundary level (-1)
+                group_arr = med_mesh.getGroupArr(-1, group_name)
+                boundary_cell_ids = group_arr.toNumPyArray()
+                
+                # Map boundary cells to global edge indices
+                group_edge_indices = []
+                for bcell_id in boundary_cell_ids:
+                    edge_conn = boundary_mesh.getNodeIdsOfCell(int(bcell_id))
+                    if len(edge_conn) >= 2:
+                        v1, v2 = edge_conn[0], edge_conn[1]
+                        edge = tuple(sorted([v1, v2]))
+                        if edge in edge_to_idx:
+                            group_edge_indices.append(edge_to_idx[edge])
+                
+                edge_groups[group_name] = np.array(group_edge_indices)
+                print(f"  Group '{group_name}': {len(group_edge_indices)} edges")
+                
+            except Exception as e:
+                print(f"  Could not load group '{group_name}': {e}")
+                continue
+                
+    except Exception as e:
+        print(f"Error reading groups: {e}")
+    
+    return edge_groups

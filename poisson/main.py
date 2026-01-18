@@ -5,18 +5,35 @@ from med_reader import *
 from poly_test import *
 from med_writer import *
 from vtk_writer import *
-from DG_P1 import P1DGPoissonSolver
+from DG_P1 import *
 
 if __name__ == "__main__":
-    # Create mesh
-    # mesh = create_square_mesh(n=20)
-    mesh = load_med_mesh_mc("./mesh/mesh.med")
 
-    # smooth_sin_cos        # test_extreme_corner
-    # test_circular_layer   # test_sharp_front
-    # test_multiple_peaks   # test_corner_peak
-    # test_internal_layer   # test_boundary_layer
+    # Define the mesh of the domain
+    mesh = create_square_mesh(n=20)
+    # mesh_name = "./mesh/mesh.med"
+    # mesh = load_med_mesh_mc(mesh_name)
+
+    # Select test case exact solution and corresponding f, g
+        # smooth_sin_cos        # test_extreme_corner
+        # test_circular_layer   # test_sharp_front
+        # test_multiple_peaks   # test_corner_peak
+        # test_internal_layer   # test_boundary_layer
     u_exact, f, g, name = test_extreme_corner()
+
+    # Set up DG Poisson solver with boundary conditions
+    # Dirichlet BCs on group "boundary"
+    # edge_groups = extract_edge_groups_from_med(mesh_name)
+    # bc_manager = BoundaryConditionManager(mesh, edge_groups)
+    # bc_manager.add_bc_by_group("boundary", "dirichlet", lambda x, y: g(x, y))
+
+    # Set up DG Poisson solver with boundary conditions
+    # Dirichlet BCs on all boundaries no needed to specify groups
+    bc_manager = BoundaryConditionManager(mesh)
+    bc_manager.add_bc_to_all_boundaries(
+        bc_type="dirichlet",
+        value_func=lambda x, y: g(x, y)
+    )
 
     # Solve with different penalty parameters to verify robustness
     penalties = [2.0, 5.0, 10.0]
@@ -24,8 +41,8 @@ if __name__ == "__main__":
     fig, axes = plt.subplots(2, len(penalties), figsize=(15, 10))
 
     for idx, penalty in enumerate(penalties):
-        solver = P1DGPoissonSolver(mesh, penalty_param=penalty)
-        u_dofs = solver.solve(f, g)
+        solver = P1DGPoissonSolver(mesh, bc_manager, penalty_param=penalty)
+        u_dofs = solver.solve(f)
 
         # Get cell values
         cell_values = []
