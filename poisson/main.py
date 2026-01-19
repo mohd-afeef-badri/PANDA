@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from med_reader import *
-from poly_test import *
+import manufactured_solutions as manufactured_solutions
 from med_writer import *
 from vtk_writer import *
 from DG_P1 import *
@@ -15,11 +15,11 @@ if __name__ == "__main__":
     # mesh = load_med_mesh_mc(mesh_name)
 
     # Select test case exact solution and corresponding f, g
-        # smooth_sin_cos        # test_extreme_corner
-        # test_circular_layer   # test_sharp_front
-        # test_multiple_peaks   # test_corner_peak
-        # test_internal_layer   # test_boundary_layer
-    u_exact, f, g, name = test_extreme_corner()
+        # smooth_sin_cos   # extreme_corner
+        # circular_layer   # sharp_front
+        # multiple_peaks   # corner_peak
+        # internal_layer   # boundary_layer
+    u_exact, f, g, name = manufactured_solutions.extreme_corner()
 
     # Set up DG Poisson solver with boundary conditions
     # Dirichlet BCs on group "boundary"

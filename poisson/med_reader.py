@@ -6,7 +6,6 @@ except ImportError:
     raise
 
 import numpy as np
-import poly_test
 
 class PolygonalMesh:
     """Simple polygonal mesh structure"""

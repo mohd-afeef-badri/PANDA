@@ -3,7 +3,7 @@ import numpy as np
 # ==============================================================================
 # Test Case 1: Boundary Layer (tanh-based)
 # ==============================================================================
-def test_boundary_layer():
+def boundary_layer():
     """
     Solution with steep boundary layer near x=0
     Gradient concentrated in thin region
@@ -37,7 +37,7 @@ def test_boundary_layer():
 # ==============================================================================
 # Test Case 2: Internal Layer (crossing the domain)
 # ==============================================================================
-def test_internal_layer():
+def internal_layer():
     """
     Solution with steep internal layer along diagonal
     """
@@ -65,7 +65,7 @@ def test_internal_layer():
 # ==============================================================================
 # Test Case 3: Corner Singularity (exponential peak)
 # ==============================================================================
-def test_corner_peak():
+def corner_peak():
     """
     Solution with sharp peak in corner
     Very high gradients radiating from (x0, y0)
@@ -93,7 +93,7 @@ def test_corner_peak():
 # ==============================================================================
 # Test Case 4: Multiple Peaks (Gaussian-like)
 # ==============================================================================
-def test_multiple_peaks():
+def multiple_peaks():
     """
     Solution with multiple sharp peaks at different locations
     """
@@ -124,7 +124,7 @@ def test_multiple_peaks():
 # ==============================================================================
 # Test Case 5: Sharp Front (propagating wave)
 # ==============================================================================
-def test_sharp_front():
+def sharp_front():
     """
     Solution with sharp transition front
     Mimics wave propagation or phase transition
@@ -167,7 +167,7 @@ def test_sharp_front():
 # ==============================================================================
 # Test Case 6: Circular Boundary Layer
 # ==============================================================================
-def test_circular_layer():
+def circular_layer():
     """
     Solution with circular boundary layer around center
     """
@@ -207,7 +207,7 @@ def test_circular_layer():
 # ==============================================================================
 # Test Case 7: Extreme Corner Layer
 # ==============================================================================
-def test_extreme_corner():
+def extreme_corner():
     """
     Very steep gradients near multiple corners
     Challenges the solver significantly
