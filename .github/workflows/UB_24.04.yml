@@ -75,6 +75,7 @@ jobs:
         mv MEDCOUPLING-${MEDCOUPLING_VERSION}-native-UB24.04-SRC $MEDCOUPLING_DIR
     - name: test panda
       run: |
+        cd poisson
         set +e                      # Don't exit immediately on failure
         export MEDCOUPLING_DIR=/home/runner/medcoupling
         source ${MEDCOUPLING_DIR}/env_launch.sh
