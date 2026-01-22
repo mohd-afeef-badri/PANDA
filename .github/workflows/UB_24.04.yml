@@ -1,4 +1,4 @@
-name: UB24.04_WITH_MED
+name: UB24.04
 
 on:
   push:
@@ -68,10 +68,10 @@ jobs:
         export MEDCOUPLING_DIR=/home/runner/medcoupling
         wget -c --header="User-Agent: Mozilla/5.0 (X11; Linux x86_64)" \
           --header="Referer: https://www.salome-platform.org/" \
-          https://files.salome-platform.org/Salome/Salome${MEDCOUPLING_VERSION}/MEDCOUPLING-${MEDCOUPLING_VERSION}.tar.gz \
-          -O MEDCOUPLING-${MEDCOUPLING_VERSION}.tar.gz
-        tar -xzf MEDCOUPLING-${MEDCOUPLING_VERSION}.tar.gz
-        mv MEDCOUPLING-${MEDCOUPLING_VERSION} $MEDCOUPLING_DIR
+          https://files.salome-platform.org/Salome/Salome${MEDCOUPLING_VERSION}/MEDCOUPLING-${MEDCOUPLING_VERSION}-native-UB24.04-SRC.tar.gz \
+          -O MEDCOUPLING-${MEDCOUPLING_VERSION}-native-UB24.04-SRC.tar.gz
+        tar -xzf MEDCOUPLING-${MEDCOUPLING_VERSION}-native-UB24.04-SRC.tar.gz
+        mv MEDCOUPLING-${MEDCOUPLING_VERSION}-native-UB24.04-SRC $MEDCOUPLING_DIR
     - name: test panda
       run: |
         set +e                      # Don't exit immediately on failure
