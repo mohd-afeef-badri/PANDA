@@ -1,5 +1,5 @@
 import numpy as np
-from med_reader import load_med_mesh_mc
+from med_io import load_med_mesh_mc
 
 def export_to_vtk(solver, u_dofs, filename="solution.vtk", field_name="u",
                   u_exact_func=None, method="P0"):

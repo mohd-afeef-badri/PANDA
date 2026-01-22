@@ -1,7 +1,7 @@
 import numpy as np
 from DG_P1 import *
 import manufactured_solutions as manufactured_solutions
-from med_reader import *
+from med_io import *
 
 def test_p1dg_poisson_accuracy():
     print("Testing P1 DG Poisson Solver Accuracy on Boundary Layer Problem")

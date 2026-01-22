@@ -1,9 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from med_reader import *
 import manufactured_solutions as manufactured_solutions
-from med_writer import *
+from med_io import *
 from vtk_writer import *
 from DG_P1 import *
 
