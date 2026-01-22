@@ -1,17 +1,16 @@
 import numpy as np
 from med_io import load_med_mesh_mc
 
-def export_to_vtk(solver, u_dofs, filename="solution.vtk", field_name="u",
-                  u_exact_func=None, method="P0"):
+def export_to_vtk(solver, u_dofs, filename="solution.vtk", field_name="u", method="P0"):
     if method == "P0":
-        _export_vtk_p0(solver, u_dofs, filename, field_name, u_exact_func)
+        _export_vtk_p0(solver, u_dofs, filename, field_name)
     elif method == "P1_vertex":
-        _export_vtk_p1_vertex(solver, u_dofs, filename, field_name, u_exact_func)
+        _export_vtk_p1_vertex(solver, u_dofs, filename, field_name)
     else:
         raise ValueError(f"Unknown export method: {method}")
 
 
-def _export_vtk_p0(solver, u_dofs, filename, field_name, u_exact_func):
+def _export_vtk_p0(solver, u_dofs, filename, field_name):
     mesh = solver.mesh
     # Evaluate at cell centroids
     u_cells = np.zeros(mesh.n_cells)
@@ -56,19 +55,10 @@ def _export_vtk_p0(solver, u_dofs, filename, field_name, u_exact_func):
         for val in u_cells:
             f.write(f"{val}\n")
 
-        # Error field if available
-        if u_exact_func is not None:
-            f.write(f"\nSCALARS error double 1\n")
-            f.write("LOOKUP_TABLE default\n")
-            for cell_id in range(mesh.n_cells):
-                cent = mesh.cell_centroid(cell_id)
-                error = abs(u_cells[cell_id] - u_exact_func(cent[0], cent[1]))
-                f.write(f"{error}\n")
-
     print(f"P0 projection exported to: {filename}")
 
 
-def _export_vtk_p1_vertex(solver, u_dofs, filename, field_name, u_exact_func):
+def _export_vtk_p1_vertex(solver, u_dofs, filename, field_name):
     mesh = solver.mesh
     # Interpolate to vertices using averaging from adjacent cells
     u_vertices = np.zeros(mesh.n_vertices)
@@ -121,21 +111,11 @@ def _export_vtk_p1_vertex(solver, u_dofs, filename, field_name, u_exact_func):
         for val in u_vertices:
             f.write(f"{val}\n")
 
-        # Error field if available
-        if u_exact_func is not None:
-            f.write(f"\nSCALARS error double 1\n")
-            f.write("LOOKUP_TABLE default\n")
-            for vertex_id in range(mesh.n_vertices):
-                vertex_pos = mesh.vertices[vertex_id]
-                error = abs(u_vertices[vertex_id] - u_exact_func(vertex_pos[0], vertex_pos[1]))
-                f.write(f"{error}\n")
-
     print(f"P1 vertex interpolation exported to: {filename}")
 
 def project_and_export_to_triangular_mesh_vtk(solver, u_dofs, tria_mesh_file, 
                                   output_file="solution_tria.vtk", 
-                                  field_name="u", 
-                                  u_exact_func=None):
+                                  field_name="u"):
     """
     Export P1 DG solution to a triangular mesh where triangular vertices 
     correspond to polygonal mesh cell centroids.
@@ -150,8 +130,6 @@ def project_and_export_to_triangular_mesh_vtk(solver, u_dofs, tria_mesh_file,
         Output VTK filename
     field_name : str
         Name for the solution field
-    u_exact_func : callable, optional
-        Exact solution function for error computation
     """    
     # Load triangular mesh
     print(f"Loading triangular mesh from {tria_mesh_file}...")
@@ -211,29 +189,6 @@ def project_and_export_to_triangular_mesh_vtk(solver, u_dofs, tria_mesh_file,
         for val in u_tria_vertices:
             f.write(f"{val}\n")
 
-        # Error field if available
-        if u_exact_func is not None:
-            f.write(f"\nSCALARS error double 1\n")
-            f.write("LOOKUP_TABLE default\n")
-            for vertex_id in range(tria_mesh.n_vertices):
-                vertex_pos = tria_mesh.vertices[vertex_id]
-                error = abs(u_tria_vertices[vertex_id] - 
-                          u_exact_func(vertex_pos[0], vertex_pos[1]))
-                f.write(f"{error}\n")
-
     print(f"Solution exported to triangular mesh: {output_file}")
     print(f"  - Triangular mesh vertices: {tria_mesh.n_vertices}")
     print(f"  - Triangular mesh cells: {tria_mesh.n_cells}")
-
-    # Compute errors on triangular mesh if exact solution provided
-    if u_exact_func is not None:
-        errors_tria = []
-        for vertex_id in range(tria_mesh.n_vertices):
-            vertex_pos = tria_mesh.vertices[vertex_id]
-            error = abs(u_tria_vertices[vertex_id] - 
-                       u_exact_func(vertex_pos[0], vertex_pos[1]))
-            errors_tria.append(error)
-
-        print(f"  - Max error: {max(errors_tria):.6e}")
-        print(f"  - Mean error: {np.mean(errors_tria):.6e}")
-        print(f"  - L2 error: {np.sqrt(np.mean(np.array(errors_tria)**2)):.6e}")

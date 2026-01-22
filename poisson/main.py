@@ -101,17 +101,13 @@ if __name__ == "__main__":
     print("Exporting to VTK | MED formats visualization:")
     print("="*60)
     
-    # Use the last solver (penalty=20)
-    u_exact_func = u_exact #lambda x, y: np.exp(-50 * ((x - .5)**2 + (y - .5)**2))
-
     # # Export to triangular mesh
     # project_and_export_to_triangular_mesh_vtk(
     #     solver,
     #     u_dofs, 
     #     tria_mesh_file="./mesh/mesh_tria_0.med",
     #     output_file="./solution/solution_triangular.vtk",
-    #     field_name="u",
-    #     u_exact_func=u_exact
+    #     field_name="u"
     # )
 
     # # Export to triangular mesh
@@ -120,16 +116,15 @@ if __name__ == "__main__":
     #     u_dofs, 
     #     tria_mesh_file="./mesh/mesh_tria_0.med",
     #     output_file="./solution/solution_triangular.med",
-    #     field_name="u",
-    #     u_exact_func=u_exact
+    #     field_name="u"
     # )
 
     # Export using different methods
-    export_to_vtk(solver, u_dofs, "./solution/solution_p0.vtk", "u", u_exact, method="P0")
-    export_to_vtk(solver, u_dofs, "./solution/solution_p1_vertex.vtk", "u", u_exact, method="P1_vertex")
+    export_to_vtk(solver, u_dofs, "./solution/solution_p0.vtk", "u", method="P0")
+    export_to_vtk(solver, u_dofs, "./solution/solution_p1_vertex.vtk", "u", method="P1_vertex")
     print("Open these files in ParaView to visualize the solution!\n")
 
     # Export to MED format
-    export_to_med(solver, u_dofs, "./solution/solution_p0.med", "u", u_exact, method="P0")
-    export_to_med(solver, u_dofs, "./solution/solution_p1_vertex.med", "u", u_exact, method="P1_vertex")
+    export_to_med(solver, u_dofs, "./solution/solution_p0.med", "u", method="P0")
+    export_to_med(solver, u_dofs, "./solution/solution_p1_vertex.med", "u", method="P1_vertex")
     print("Open these files in SALOME ParaVis to visualize the solution!\n")

@@ -329,18 +329,18 @@ def extract_edge_groups_from_med(filename, mesh_name=None):
 
 
 def export_to_med(solver, u_dofs, filename="solution.med", field_name="u",
-                  u_exact_func=None, method="P0"):
+                  method="P0"):
     if mc is None:
         raise ImportError("MEDCoupling (mc) is required to export MED files")
     if method == "P0":
-        _export_med_p0(solver, u_dofs, filename, field_name, u_exact_func)
+        _export_med_p0(solver, u_dofs, filename, field_name)
     elif method == "P1_vertex":
-        _export_med_p1_vertex(solver, u_dofs, filename, field_name, u_exact_func)
+        _export_med_p1_vertex(solver, u_dofs, filename, field_name)
     else:
         raise ValueError(f"Unknown export method: {method}")
 
 
-def _export_med_p0(solver, u_dofs, filename, field_name, u_exact_func):
+def _export_med_p0(solver, u_dofs, filename, field_name):
     mesh = solver.mesh
     # Evaluate at cell centroids
     u_cells = np.zeros(mesh.n_cells)
@@ -418,34 +418,10 @@ def _export_med_p0(solver, u_dofs, filename, field_name, u_exact_func):
     med_writer.setFieldNoProfileSBT(field)
     med_writer.write(filename, 0)  # 0 = append mode
 
-    # Add error field if available
-    if u_exact_func is not None:
-        errors = np.zeros(mesh.n_cells)
-        for cell_id in range(mesh.n_cells):
-            cent = mesh.cell_centroid(cell_id)
-            errors[cell_id] = abs(u_cells[cell_id] - u_exact_func(cent[0], cent[1]))
-
-        # Reorder errors
-        errors_reordered = errors[cell_mapping]
-
-        error_field = mc.MEDCouplingFieldDouble(mc.ON_CELLS, mc.ONE_TIME)
-        error_field.setName("error")
-        error_field.setMesh(umesh)
-        error_field.setTime(0.0, 0, 0)
-        error_array = mc.DataArrayDouble(errors_reordered)
-        error_array.setInfoOnComponent(0, "error")
-        error_field.setArray(error_array)
-
-        error_field.checkConsistencyLight()
-
-        error_writer = mc.MEDFileField1TS()
-        error_writer.setFieldNoProfileSBT(error_field)
-        error_writer.write(filename, 0)  # append
-
     print(f"P0 projection exported to MED: {filename}")
 
 
-def _export_med_p1_vertex(solver, u_dofs, filename, field_name, u_exact_func):
+def _export_med_p1_vertex(solver, u_dofs, filename, field_name):
     mesh = solver.mesh
     # Interpolate to vertices using averaging from adjacent cells
     u_vertices = np.zeros(mesh.n_vertices)
@@ -525,33 +501,11 @@ def _export_med_p1_vertex(solver, u_dofs, filename, field_name, u_exact_func):
     med_writer.setFieldNoProfileSBT(field)
     med_writer.write(filename, 0)  # 0 = append mode
 
-    # Add error field if available
-    if u_exact_func is not None:
-        errors = np.zeros(mesh.n_vertices)
-        for vertex_id in range(mesh.n_vertices):
-            vertex_pos = mesh.vertices[vertex_id]
-            errors[vertex_id] = abs(u_vertices[vertex_id] - u_exact_func(vertex_pos[0], vertex_pos[1]))
-
-        error_field = mc.MEDCouplingFieldDouble(mc.ON_NODES, mc.ONE_TIME)
-        error_field.setName("error")
-        error_field.setMesh(umesh)
-        error_field.setTime(0.0, 0, 0)
-        error_array = mc.DataArrayDouble(errors)
-        error_array.setInfoOnComponent(0, "error")
-        error_field.setArray(error_array)
-
-        error_field.checkConsistencyLight()
-
-        error_writer = mc.MEDFileField1TS()
-        error_writer.setFieldNoProfileSBT(error_field)
-        error_writer.write(filename, 0)  # append
-
     print(f"P1 vertex interpolation exported to MED: {filename}")
 
 def project_and_export_to_triangular_mesh_med(solver, u_dofs, tria_mesh_file,
                                          output_file="solution_tria.med",
-                                         field_name="u",
-                                         u_exact_func=None):
+                                         field_name="u"):
     """
     Project P1 DG solution (polymesh cell-centroid values) onto a triangular
     MED mesh whose vertices correspond to the polymesh cell centroids, and
@@ -627,33 +581,6 @@ def project_and_export_to_triangular_mesh_med(solver, u_dofs, tria_mesh_file,
     med_writer.setFieldNoProfileSBT(field)
     med_writer.write(output_file, 0)  # append
 
-    # Optional error field (node-based)
-    if u_exact_func is not None:
-        errors = np.zeros(tria_mesh.n_vertices)
-        for vid in range(tria_mesh.n_vertices):
-            vpos = tria_mesh.vertices[vid]
-            errors[vid] = abs(u_tria_vertices[vid] - u_exact_func(vpos[0], vpos[1]))
-
-        error_field = mc.MEDCouplingFieldDouble(mc.ON_NODES, mc.ONE_TIME)
-        error_field.setName("error")
-        error_field.setMesh(umesh)
-        error_field.setTime(0.0, 0, 0)
-
-        error_array = mc.DataArrayDouble(errors)
-        error_array.setInfoOnComponent(0, "error")
-        error_field.setArray(error_array)
-
-        error_field.checkConsistencyLight()
-
-        error_writer = mc.MEDFileField1TS()
-        error_writer.setFieldNoProfileSBT(error_field)
-        error_writer.write(output_file, 0)  # append
-
     print(f"Solution exported to triangular MED: {output_file}")
     print(f"  - Triangular mesh vertices: {tria_mesh.n_vertices}")
     print(f"  - Triangular mesh cells: {tria_mesh.n_cells}")
-
-    if u_exact_func is not None:
-        print(f"  - Max error: {np.max(errors):.6e}")
-        print(f"  - Mean error: {np.mean(errors):.6e}")
-        print(f"  - L2 error: {np.sqrt(np.mean(errors**2)):.6e}")
