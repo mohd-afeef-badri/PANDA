@@ -79,6 +79,7 @@ jobs:
         set +e                      # Don't exit immediately on failure
         export MEDCOUPLING_DIR=/home/runner/medcoupling
         source ${MEDCOUPLING_DIR}/env_launch.sh
+        export PYTHONPATH=$GITHUB_WORKSPACE:$PYTHONPATH
         pytest -v
         status=$?                  # Capture exit code of pytest
         mkdir -p $GITHUB_WORKSPACE/artifacts
