@@ -1,5 +1,8 @@
+"""VTK file export utilities."""
+
 import numpy as np
-from med_io import load_med_mesh_mc
+from .med_io import load_med_mesh_mc
+
 
 def export_to_vtk(solver, u_dofs, filename="solution.vtk", field_name="u", method="P0"):
     if method == "P0":
