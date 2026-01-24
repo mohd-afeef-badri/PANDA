@@ -1,14 +1,22 @@
+import sys
+from pathlib import Path
+
+# Add parent directory to path so we can import panda package
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+
 import numpy as np
 from DG_P1 import *
 import manufactured_solutions as manufactured_solutions
-from med_io import *
+from panda.lib import med_io
+from panda.lib import polygonal_mesh
+from panda.lib import boundary_conditions
 
 def test_p1dg_poisson_accuracy():
     print("Testing P1 DG Poisson Solver Accuracy on Boundary Layer Problem")
-    mesh = create_square_mesh(n=51)
+    mesh = polygonal_mesh.create_square_mesh(n=51)
     u_exact, f, g, _ = manufactured_solutions.boundary_layer()
 
-    bc = BoundaryConditionManager(mesh)
+    bc = boundary_conditions.BoundaryConditionManager(mesh)
     bc.add_bc_to_all_boundaries("dirichlet", g)
 
     solver = P1DGPoissonSolver(mesh, bc, penalty_param=10.0)
@@ -32,10 +40,10 @@ def test_convergence_rate():
     errors = []
 
     for n in [4, 8, 16]:
-        mesh = create_square_mesh(n=n)
+        mesh = polygonal_mesh.create_square_mesh(n=n)
         u_exact, f, g, _ = manufactured_solutions.smooth_sin_cos()
 
-        bc = BoundaryConditionManager(mesh)
+        bc = boundary_conditions.BoundaryConditionManager(mesh)
         bc.add_bc_to_all_boundaries("dirichlet", g)
 
         solver = P1DGPoissonSolver(mesh, bc, penalty_param=10)
@@ -55,10 +63,10 @@ def test_convergence_rate():
 
 def test_penalty_stability():
     print("Testing P1 DG Poisson Solver Stability with Varying Penalty Parameters")
-    mesh = create_square_mesh(n=5)
+    mesh = polygonal_mesh.create_square_mesh(n=5)
     u_exact, f, g, _ = manufactured_solutions.smooth_sin_cos()
 
-    bc = BoundaryConditionManager(mesh)
+    bc = boundary_conditions.BoundaryConditionManager(mesh)
     bc.add_bc_to_all_boundaries("dirichlet", g)
 
     penalties = [2.0, 5.0, 10.0]
@@ -89,8 +97,8 @@ def test_all_boundaries_simple():
     within a tolerance to detect regressions.
     """
     
-    mesh = load_med_mesh_mc("./mesh/mesh.med")
-    bc_manager = BoundaryConditionManager(mesh)
+    mesh = med_io.load_med_mesh_mc("./mesh/mesh.med")
+    bc_manager = boundary_conditions.BoundaryConditionManager(mesh)
     
     # Apply Dirichlet BC u=0 to ALL boundaries
     bc_manager.add_bc_to_all_boundaries("dirichlet", 0.0)
@@ -134,8 +142,8 @@ def test_all_boundaries_function():
     and produces consistent results across the domain.
     """
     
-    mesh = load_med_mesh_mc("./mesh/mesh.med")
-    bc_manager = BoundaryConditionManager(mesh)
+    mesh = med_io.load_med_mesh_mc("./mesh/mesh.med")
+    bc_manager = boundary_conditions.BoundaryConditionManager(mesh)
     
     # Apply spatially-varying Dirichlet BC to all boundaries
     bc_manager.add_bc_to_all_boundaries(
@@ -181,10 +189,10 @@ def test_global_with_override():
     Uses a meaningful source term f = x + y to test non-trivial behavior.
     """
     
-    mesh = load_med_mesh_mc("./mesh/mesh.med")
-    edge_groups = extract_edge_groups_from_med("./mesh/mesh.med")
+    mesh = med_io.load_med_mesh_mc("./mesh/mesh.med")
+    edge_groups = med_io.extract_edge_groups_from_med("./mesh/mesh.med")
     
-    bc_manager = BoundaryConditionManager(mesh, edge_groups)
+    bc_manager = boundary_conditions.BoundaryConditionManager(mesh, edge_groups)
     
     # Set default: all boundaries have Dirichlet u=0
     bc_manager.add_bc_to_all_boundaries("dirichlet", 0.0)
@@ -231,8 +239,8 @@ def test_global_with_analytical_override():
     Uses a meaningful source term f = sin(π*x)*cos(π*y).
     """
     
-    mesh = load_med_mesh_mc("./mesh/mesh.med")
-    bc_manager = BoundaryConditionManager(mesh)
+    mesh = med_io.load_med_mesh_mc("./mesh/mesh.med")
+    bc_manager = boundary_conditions.BoundaryConditionManager(mesh)
     
     # Default: Neumann BC (no flux) everywhere
     bc_manager.add_bc_to_all_boundaries("neumann", 0.0)
@@ -286,8 +294,8 @@ def test_insulated_boundaries():
     with insulated top and bottom boundaries.
     """
     
-    mesh = load_med_mesh_mc("./mesh/mesh.med")
-    bc_manager = BoundaryConditionManager(mesh)
+    mesh = med_io.load_med_mesh_mc("./mesh/mesh.med")
+    bc_manager = boundary_conditions.BoundaryConditionManager(mesh)
     
     # Most boundaries are insulated (zero heat flux)
     bc_manager.add_bc_to_all_boundaries("neumann", 0.0)
@@ -352,10 +360,10 @@ def test_priority_demonstration():
     the higher priority BC takes precedence.
     """
     
-    mesh = load_med_mesh_mc("./mesh/mesh.med")
-    edge_groups = extract_edge_groups_from_med("./mesh/mesh.med")
+    mesh = med_io.load_med_mesh_mc("./mesh/mesh.med")
+    edge_groups = med_io.extract_edge_groups_from_med("./mesh/mesh.med")
     
-    bc_manager = BoundaryConditionManager(mesh, edge_groups)
+    bc_manager = boundary_conditions.BoundaryConditionManager(mesh, edge_groups)
     
     # Priority 4 (lowest): Default is homogeneous Dirichlet
     # This is built-in, no need to set
@@ -431,10 +439,10 @@ def test_analytical_boundaries():
     """
     
     # Load mesh (no need for edge groups)
-    mesh = load_med_mesh_mc("./mesh/mesh.med")
+    mesh = med_io.load_med_mesh_mc("./mesh/mesh.med")
     
     # Create BC manager without edge groups
-    bc_manager = BoundaryConditionManager(mesh)
+    bc_manager = boundary_conditions.BoundaryConditionManager(mesh)
     
     # Define boundaries analytically
     # Assume domain is [0,1] x [0,1]
@@ -517,13 +525,13 @@ def test_med_groups():
     """
     
     # 1. Load mesh with groups
-    mesh = load_med_mesh_mc("./mesh/square_poly.med")
+    mesh = med_io.load_med_mesh_mc("./mesh/square_poly.med")
     
     # 2. Extract edge groups from MED file
-    edge_groups = extract_edge_groups_from_med("./mesh/square_poly.med")
+    edge_groups = med_io.extract_edge_groups_from_med("./mesh/square_poly.med")
     
     # 3. Create boundary condition manager
-    bc_manager = BoundaryConditionManager(mesh, edge_groups)
+    bc_manager = boundary_conditions.BoundaryConditionManager(mesh, edge_groups)
     
     # 4. Define boundary conditions for each group using add_bc_by_group
     bc_manager.add_bc_by_group("left", "dirichlet", 1.0)
@@ -581,11 +589,11 @@ def test_mixed_mode_bc_groups_analytical():
     """
     
     # 1. Load mesh and groups
-    mesh = load_med_mesh_mc("./mesh/square_poly.med")
-    edge_groups = extract_edge_groups_from_med("./mesh/square_poly.med")
+    mesh = med_io.load_med_mesh_mc("./mesh/square_poly.med")
+    edge_groups = med_io.extract_edge_groups_from_med("./mesh/square_poly.med")
     
     # 2. Create boundary condition manager
-    bc_manager = BoundaryConditionManager(mesh, edge_groups)
+    bc_manager = boundary_conditions.BoundaryConditionManager(mesh, edge_groups)
     
     # 3. MED group boundaries (highest priority)
     bc_manager.add_bc_by_group("left", "dirichlet", lambda x, y: 4*y*(1-y))
