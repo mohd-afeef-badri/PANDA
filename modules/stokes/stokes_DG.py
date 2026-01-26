@@ -10,11 +10,21 @@ from scipy.sparse.linalg import spsolve
 from panda.lib import boundary_conditions
 
 class P1DGStokesSolver:
-    def __init__(self, mesh, viscosity=1.0, penalty_u=40.0, penalty_p=1.0):
+    def __init__(self, mesh, bc_manager, viscosity=1.0, penalty_u=40.0, penalty_p=0.5):
+        """
+        Parameters:
+        -----------
+        mesh : PolygonalMesh
+        bc_manager : BoundaryConditionManager
+        viscosity : float
+        penalty_u : float
+        penalty_p : float
+        """
         self.mesh = mesh
+        self.bc_manager = bc_manager
         self.mu = viscosity
-        self.gamma_u = penalty_u    
-        self.gamma_p = penalty_p    
+        self.gamma_u = penalty_u
+        self.gamma_p = penalty_p
         self.dofs_per_cell = 9      
         self.n_dofs = mesh.n_cells * self.dofs_per_cell
         self.regularization = 1e-6  # Small epsilon to fix pressure nullspace
@@ -34,7 +44,7 @@ class P1DGStokesSolver:
         if not derivatives: return phi
         return phi, np.array([0.0, 1.0, 0.0]), np.array([0.0, 0.0, 1.0])
 
-    def assemble(self, f_func, g_func):
+    def assemble(self, f_func):
         # LIL is fast for construction
         A = lil_matrix((self.n_dofs, self.n_dofs))
         b = np.zeros(self.n_dofs)
@@ -125,27 +135,53 @@ class P1DGStokesSolver:
                 c_i = cells[0]
                 idx_i = self.get_indices(c_i)
                 n = self.mesh.edge_normal(e_id, c_i)
-                gu, gv = g_func(mid[0], mid[1])
+                
+                # Get boundary condition
+                bc = self.bc_manager.get_bc(e_id)
+                
                 phi_i, gx_i, gy_i = self.evaluate_basis(c_i, mid, True)
                 gn_i = gx_i*n[0] + gy_i*n[1]
+                
+                if bc.bc_type == 'dirichlet':
+                    # Evaluate BC at midpoint
+                    bc_val = bc.evaluate(mid[0], mid[1])
+                    if bc.is_vector:
+                        gu, gv = bc_val
+                    else:
+                        # Scalar BC - assume no-slip (both components zero)
+                        gu, gv = bc_val, bc_val
+                    
+                    for i in range(3):
+                        # RHS (Nitsche)
+                        b[idx_i['u'][i]] += (sig_u*phi_i[i] - self.mu*gn_i[i])*gu*h_e
+                        b[idx_i['v'][i]] += (sig_u*phi_i[i] - self.mu*gn_i[i])*gv*h_e
+                        b[idx_i['p'][i]] -= phi_i[i]*(gu*n[0] + gv*n[1])*h_e
+            
+                        for j in range(3):
+                            # LHS Penalty
+                            val = (sig_u*phi_i[i]*phi_i[j] - self.mu*phi_i[i]*gn_i[j] - self.mu*gn_i[i]*phi_i[j]) * h_e
+                            A[idx_i['u'][i], idx_i['u'][j]] += val
+                            A[idx_i['v'][i], idx_i['v'][j]] += val
+    
+                elif bc.bc_type == 'neumann':
+                    # Traction boundary condition: sigma·n = g
+                    # For Stokes: sigma = -pI + mu(grad u + grad u^T)
+                    # Implementation depends on your specific needs
+                    bc_val = bc.evaluate(mid[0], mid[1])
+                    if bc.is_vector:
+                        trac_x, trac_y = bc_val
+                    else:
+                        trac_x, trac_y = bc_val, bc_val
 
-                for i in range(3):
-                    # RHS (Nitsche)
-                    b[idx_i['u'][i]] += (sig_u*phi_i[i] - self.mu*gn_i[i])*gu*h_e
-                    b[idx_i['v'][i]] += (sig_u*phi_i[i] - self.mu*gn_i[i])*gv*h_e
-                    b[idx_i['p'][i]] -= phi_i[i]*(gu*n[0] + gv*n[1])*h_e
-
-                    for j in range(3):
-                        # LHS Penalty
-                        val = (sig_u*phi_i[i]*phi_i[j] - self.mu*phi_i[i]*gn_i[j] - self.mu*gn_i[i]*phi_i[j]) * h_e
-                        A[idx_i['u'][i], idx_i['u'][j]] += val
-                        A[idx_i['v'][i], idx_i['v'][j]] += val
+                    for i in range(3):
+                        b[idx_i['u'][i]] += phi_i[i] * trac_x * h_e
+                        b[idx_i['v'][i]] += phi_i[i] * trac_y * h_e
 
         return A.tocsr(), b
 
-    def solve(self, f_func, g_func):
+    def solve(self, f_func):
         print(f"Assembling system (Grid: {self.mesh.n_cells} cells)...")
-        A, b = self.assemble(f_func, g_func)
+        A, b = self.assemble(f_func)
         
         print(f"Solving linear system (DOFs: {self.n_dofs})...")
         try:

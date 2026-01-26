@@ -22,19 +22,21 @@ if __name__ == "__main__":
 
     # 2. Define Problem (Lid Driven Cavity)
     def f_source(x, y): return 0.0, 0.0
-    def g_boundary(x, y):
-        # Velocity 1.0 on top lid (y=1), 0.0 elsewhere
-        if y > 0.99: return 1.0, 0.0
-        return 0.0, 0.0
 
-    # 3. Initialize Solver
-    # Note: penalty_u=40.0 is robust for P1 DG.
-    solver = P1DGStokesSolver(mesh, viscosity=0.1, penalty_u=40.0, penalty_p=0.5)
+    edge_groups = med_io.extract_edge_groups_from_med(mesh_name)
+    bc_manager = boundary_conditions.BoundaryConditionManager(mesh, edge_groups)
 
-    # 4. Solve
-    u_dofs = solver.solve(f_source, g_boundary)
+    # Lid-driven cavity: top wall moving, others no-slip
+    bc_manager.add_bc_by_group("top", "dirichlet", lambda x, y: (1.0, 0.0), is_vector=True)
+    bc_manager.add_bc_by_group("bottom", "dirichlet", (0.0, 0.0), is_vector=True)
+    bc_manager.add_bc_by_group("left", "dirichlet", (0.0, 0.0), is_vector=True)
+    bc_manager.add_bc_by_group("right", "dirichlet", (0.0, 0.0), is_vector=True)
 
-    # 3. Postprocess
+    # 3. Solve
+    solver = P1DGStokesSolver(mesh, bc_manager, viscosity=0.1, penalty_u=40.0, penalty_p=0.5)
+    u_dofs = solver.solve(f_source)
+
+    # 4. Postprocess
     if u_dofs is not None:
         print("Solve successful! Visualizing...")
         
