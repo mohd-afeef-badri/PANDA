@@ -64,26 +64,54 @@ if __name__ == "__main__":
         # 6. Plot
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
-        # Velocity Magnitude
-        sc1 = ax1.tripcolor(cents[:,0], cents[:,1], vel_mag, shading='gouraud', cmap='viridis')
-        ax1.set_title("Velocity Magnitude |u|")
+        # Normalize for colormap
+        vel_norm = (vel_mag - vel_mag.min()) / (vel_mag.max() - vel_mag.min() + 1e-10)
+        p_norm = (p_avg - p_avg.min()) / (p_avg.max() - p_avg.min() + 1e-10)
+
+        # Velocity Magnitude with mesh
+        for i, cell in enumerate(mesh.cells):
+            verts = mesh.vertices[cell]
+            poly = plt.Polygon(verts, facecolor=plt.cm.viridis(vel_norm[i]), 
+                              edgecolor='black', linewidth=0.3)
+            ax1.add_patch(poly)
+
+        ax1.set_xlim(mesh.vertices[:, 0].min()-0.05, mesh.vertices[:, 0].max()+0.05)
+        ax1.set_ylim(mesh.vertices[:, 1].min()-0.05, mesh.vertices[:, 1].max()+0.05)
         ax1.set_aspect('equal')
-        plt.colorbar(sc1, ax=ax1)
-        
-        # Streamlines (Quiver)
-        skip = (slice(None, None, 1))
+        ax1.set_title("Velocity Magnitude |u|")
+
+        # Add colorbar
+        sm1 = plt.cm.ScalarMappable(cmap='viridis', 
+                                     norm=plt.Normalize(vmin=vel_mag.min(), vmax=vel_mag.max()))
+        sm1.set_array([])
+        plt.colorbar(sm1, ax=ax1)
+
+        # Quiver
+        skip = slice(None, None, 1)
         ax1.quiver(cents[skip,0], cents[skip,1], u_avg[skip], v_avg[skip], 
                    color='white', alpha=0.6)
 
-        # Pressure
-        sc2 = ax2.tripcolor(cents[:,0], cents[:,1], p_avg, shading='gouraud', cmap='RdBu_r')
-        ax2.set_title("Pressure Field")
+        # Pressure with mesh
+        for i, cell in enumerate(mesh.cells):
+            verts = mesh.vertices[cell]
+            poly = plt.Polygon(verts, facecolor=plt.cm.RdBu_r(p_norm[i]), 
+                              edgecolor='black', linewidth=0.3)
+            ax2.add_patch(poly)
+
+        ax2.set_xlim(mesh.vertices[:, 0].min()-0.05, mesh.vertices[:, 0].max()+0.05)
+        ax2.set_ylim(mesh.vertices[:, 1].min()-0.05, mesh.vertices[:, 1].max()+0.05)
         ax2.set_aspect('equal')
-        plt.colorbar(sc2, ax=ax2)
+        ax2.set_title("Pressure Field")
+
+        # Add colorbar
+        sm2 = plt.cm.ScalarMappable(cmap='RdBu_r',
+                                     norm=plt.Normalize(vmin=p_avg.min(), vmax=p_avg.max()))
+        sm2.set_array([])
+        plt.colorbar(sm2, ax=ax2)
 
         plt.tight_layout()
         plt.show()
-        
+
         # Export discontinuous cell data (Raw DG result)
         vtk_writer.export_to_vtk(solver, u_dofs, 
             filename="./solution/stokes_P0.vtk", 
