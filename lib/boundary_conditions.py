@@ -3,7 +3,7 @@
 
 class BoundaryCondition:
     """Base class for boundary conditions"""
-    def __init__(self, bc_type, value_func):
+    def __init__(self, bc_type, value_func, is_vector=False):
         """
         Parameters:
         -----------
@@ -11,9 +11,14 @@ class BoundaryCondition:
             'dirichlet' or 'neumann'
         value_func : callable
             Function f(x, y) that returns the BC value at point (x, y)
+            For scalars: returns float
+            For vectors: returns tuple (val_x, val_y)
+        is_vector : bool
+            True if this BC returns vector values (for Stokes velocity)
         """
         self.bc_type = bc_type.lower()
         self.value_func = value_func
+        self.is_vector = is_vector
     
     def evaluate(self, x, y):
         """Evaluate the boundary condition at point (x, y)"""
@@ -45,73 +50,85 @@ class BoundaryConditionManager:
         for group_name, edge_indices in self.edge_groups.items():
             for edge_idx in edge_indices:
                 self.edge_to_group[edge_idx] = group_name
-    
-    def add_bc_by_group(self, group_name, bc_type, value_func):
-        """
-        Add a boundary condition to a specific edge group from MED file
-        
-        Parameters:
-        -----------
-        group_name : str
-            Name of the edge group
-        bc_type : str
-            'dirichlet' or 'neumann'
-        value_func : callable or float
-            Function f(x, y) or constant value for the BC
-        """
-        if isinstance(value_func, (int, float)):
-            const_val = value_func
-            value_func = lambda x, y, v=const_val: v
-        
-        self.conditions[group_name] = BoundaryCondition(bc_type, value_func)
-    
-    def add_bc_by_function(self, region_func, bc_type, value_func, name=None, tolerance=1e-10):
+
+    def add_bc_by_group(self, group_name, bc_type, value_func, is_vector=False):
+       """
+       Add a boundary condition to a specific edge group from MED file
+
+       Parameters:
+       -----------
+       group_name : str
+           Name of the edge group
+       bc_type : str
+           'dirichlet' or 'neumann'
+       value_func : callable or float/tuple
+           Function f(x, y) or constant value for the BC
+           For vectors: can be tuple (ux, uy) or function returning (ux, uy)
+       is_vector : bool
+           True if this is a vector-valued BC (for Stokes)
+       """
+       if isinstance(value_func, (int, float)):
+           const_val = value_func
+           value_func = lambda x, y, v=const_val: v
+       elif isinstance(value_func, tuple) and len(value_func) == 2:
+           const_vals = value_func
+           value_func = lambda x, y, v=const_vals: v
+
+       self.conditions[group_name] = BoundaryCondition(bc_type, value_func, is_vector)
+
+    def add_bc_by_function(self, region_func, bc_type, value_func, name=None, tolerance=1e-10, is_vector=False):
         """
         Add a boundary condition defined by an analytical function
-        
+
         Parameters:
         -----------
         region_func : callable
             Function f(x, y) that returns True if point (x, y) is on this boundary
-            Example: lambda x, y: abs(x - 1.0) < 1e-10  (right boundary at x=1)
         bc_type : str
             'dirichlet' or 'neumann'
-        value_func : callable or float
+        value_func : callable or float/tuple
             Function f(x, y) or constant value for the BC
         name : str, optional
-            Name for this boundary region (for debugging)
+            Name for this boundary region
         tolerance : float, default=1e-10
             Tolerance for region function evaluation
+        is_vector : bool
+            True if this is a vector-valued BC
         """
         if isinstance(value_func, (int, float)):
             const_val = value_func
             value_func = lambda x, y, v=const_val: v
-        
-        bc = BoundaryCondition(bc_type, value_func)
-        
-        # Store as tuple: (region_func, bc, name)
+        elif isinstance(value_func, tuple) and len(value_func) == 2:
+            const_vals = value_func
+            value_func = lambda x, y, v=const_vals: v
+
+        bc = BoundaryCondition(bc_type, value_func, is_vector)
         self.analytical_conditions.append((region_func, bc, name, tolerance))
-        
+
         if name:
             print(f"Added analytical BC '{name}' ({bc_type})")
-    
-    def add_bc_to_all_boundaries(self, bc_type, value_func):
+
+    def add_bc_to_all_boundaries(self, bc_type, value_func, is_vector=False):
         """
         Add a boundary condition to ALL boundary edges (global fallback)
-        This will apply to any boundary edge that doesn't match a specific group or analytical condition
-        
+
         Parameters:
         -----------
         bc_type : str
             'dirichlet' or 'neumann'
-        value_func : callable or float
+        value_func : callable or float/tuple
             Function f(x, y) or constant value for the BC
+        is_vector : bool
+            True if this is a vector-valued BC
         """
         if isinstance(value_func, (int, float)):
             const_val = value_func
             value_func = lambda x, y, v=const_val: v
-        
-        self.global_boundary_condition = BoundaryCondition(bc_type, value_func)
+        elif isinstance(value_func, tuple) and len(value_func) == 2:
+            const_vals = value_func
+            value_func = lambda x, y, v=const_vals: v
+
+        self.global_boundary_condition = BoundaryCondition(bc_type, value_func, is_vector)
         print(f"Set global boundary condition: {bc_type}")
     
     def set_default_bc(self, bc_type, value_func):
